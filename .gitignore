@@ -6,6 +6,7 @@ __pycache__/
 dist/
 .env
 *.db
+template/
 backend/data/uploads/*
 !backend/data/uploads/.gitkeep
 backend/data/*.log
