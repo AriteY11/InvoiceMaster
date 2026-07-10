@@ -1,0 +1,29 @@
+From 7fbf8a855abdea1f891aa94bcadf49876d274b1e Mon Sep 17 00:00:00 2001
+From: root <1256418086@qq.com>
+Date: Tue, 23 Jun 2020 23:50:02 -0700
+Subject: [PATCH] nd stash test
+
+---
+ helloappppp | 1 +
+ readme      | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+ create mode 100644 helloappppp
+
+diff --git a/helloappppp b/helloappppp
+new file mode 100644
+index 0000000..0922766
+--- /dev/null
++++ b/helloappppp
+@@ -0,0 +1 @@
++hjsdfjkhagkbjdfgjkbsdfghjhjk
+diff --git a/readme b/readme
+index 589e042..4bb5a99 100644
+--- a/readme
++++ b/readme
+@@ -1,2 +1,2 @@
+-CZZ
++asjkldghfkalweyusghfukiywACZZ
+ hello worldX
+-- 
+2.17.1
+
