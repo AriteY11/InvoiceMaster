@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='32' height='32' rx='6' fill='%231E3A5F'/%3E%3Cpath d='M8 6C8 4.89543 8.89543 4 10 4H22C23.1046 4 24 4.89543 24 6V26C24 27.1046 23.1046 28 22 28H10C8.89543 28 8 27.1046 8 26V6Z' fill='white' opacity='.95'/%3E%3Cpath d='M12 10H20' stroke='%231E3A5F' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M12 14H20' stroke='%231E3A5F' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M12 18H17' stroke='%231E3A5F' stroke-width='1.5' stroke-linecap='round'/%3E%3Ccircle cx='22' cy='22' r='5' fill='%233B82F6'/%3E%3Cpath d='M20 22L21.5 23.5L24.5 20.5' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>InvoiceMaster</title>
+    <script type="module">
+      if (import.meta.hot?.on) {
+        import.meta.hot.on('vite:error', (error) => {
+          if (error.err) {
+            console.error(
+              [error.err.message, error.err.frame].filter(Boolean).join('\n'),
+            )
+          }
+        })
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+vendor/
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+dist/
+.env
+*.db
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+backend/data/*.log
+backend/venv/
+*.egg-info/
