@@ -58,7 +58,7 @@ export default function InvoiceDetailPage() {
 
   function formatAmount(amount: number | null) {
     if (amount === null || amount === undefined) return null;
-    return `¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `CN¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   return (

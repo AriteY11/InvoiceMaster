@@ -73,7 +73,7 @@ export function formatFieldValue(key: string, detail: Record<string, unknown>): 
   if (key === "issue_date") return String(v).slice(0, 10);
   if (key === "page_count") return String(v);
   if (["total_amount", "tax_amount", "amount_excluding_tax"].includes(key) && typeof v === "number") {
-    return `¥${v.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `CN¥${v.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
   return String(v);
 }

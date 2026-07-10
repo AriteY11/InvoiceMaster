@@ -163,7 +163,7 @@ export default function InvoiceListPage() {
 
   function formatAmount(amount: number | null) {
     if (amount === null || amount === undefined) return "-";
-    return `¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `CN¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   return (

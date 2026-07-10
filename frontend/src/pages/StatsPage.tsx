@@ -25,11 +25,11 @@ const CARD_LABELS: Record<string, string> = {
 
 function formatAmount(value: unknown): string {
   const num = Number(value);
-  if (isNaN(num) || num === 0) return "¥0.00";
+  if (isNaN(num) || num === 0) return "CN¥0.00";
   if (Math.abs(num) >= 10000) {
-    return `¥${(num / 10000).toFixed(2)} 万`;
+    return `CN¥${(num / 10000).toFixed(2)} 万`;
   }
-  return `¥${num.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `CN¥${num.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatCardValue(key: string, value: unknown): string {
