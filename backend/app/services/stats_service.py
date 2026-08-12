@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 
 from sqlalchemy import func
 
@@ -68,65 +69,51 @@ def get_trends(db, group_by: str = "month") -> StatsTrendResponse:
     return StatsTrendResponse(group_by=group_by, items=items)
 
 
+def _get_item_name_categories(db) -> StatsCategoryResponse:
+    rows = (
+        db.query(
+            InvoiceItem.item_name.label("name"),
+            func.count(func.distinct(InvoiceItem.invoice_id)).label("cnt"),
+            func.coalesce(func.sum(InvoiceItem.amount), 0).label("amt"),
+        )
+        .filter(InvoiceItem.item_name.isnot(None))
+        .group_by("name")
+        .order_by(func.sum(InvoiceItem.amount).desc())
+        .limit(20)
+        .all()
+    )
+
+    merged: dict[str, dict[str, int | Decimal]] = {}
+    for row in rows:
+        category = extract_service_category(row.name)
+        bucket = merged.setdefault(category, {"cnt": 0, "amt": Decimal("0")})
+        bucket["cnt"] += row.cnt
+        bucket["amt"] += row.amt
+
+    items = [
+        CategoryPoint(name=category, count=stats["cnt"], total_amount=stats["amt"])
+        for category, stats in sorted(merged.items(), key=lambda x: x[1]["amt"], reverse=True)
+    ]
+    return StatsCategoryResponse(dimension="item_name", items=items)
+
+
 def get_categories(db, dimension: str = "invoice_type") -> StatsCategoryResponse:
-    if dimension == "seller_name":
-        col = Invoice.seller_name
-        rows = (
-            db.query(
-                func.coalesce(col, "未分类").label("name"),
-                func.count(Invoice.id).label("cnt"),
-                func.coalesce(func.sum(Invoice.total_amount), 0).label("amt"),
-            )
-            .filter(Invoice.parse_status == "parsed")
-            .group_by("name")
-            .order_by(func.count(Invoice.id).desc())
-            .limit(20)
-            .all()
+    if dimension == "item_name":
+        return _get_item_name_categories(db)
+
+    col = Invoice.seller_name if dimension == "seller_name" else Invoice.invoice_type
+    rows = (
+        db.query(
+            func.coalesce(col, "未分类").label("name"),
+            func.count(Invoice.id).label("cnt"),
+            func.coalesce(func.sum(Invoice.total_amount), 0).label("amt"),
         )
-    elif dimension == "item_name":
-        rows = (
-            db.query(
-                InvoiceItem.item_name.label("name"),
-                func.count(func.distinct(InvoiceItem.invoice_id)).label("cnt"),
-                func.coalesce(func.sum(InvoiceItem.amount), 0).label("amt"),
-            )
-            .filter(InvoiceItem.item_name.isnot(None))
-            .group_by("name")
-            .order_by(func.sum(InvoiceItem.amount).desc())
-            .limit(20)
-            .all()
-        )
-        rows = [r._asdict() for r in rows]
-        merged = {}
-        for r in rows:
-            category = extract_service_category(r["name"])
-            if category not in merged:
-                merged[category] = {"cnt": 0, "amt": 0}
-            merged[category]["cnt"] += r["cnt"]
-            merged[category]["amt"] += r["amt"]
-        rows_type = type("Row", (), {})
-        rows = [
-            rows_type()
-            for _ in merged
-        ]
-        for i, (k, v) in enumerate(sorted(merged.items(), key=lambda x: x[1]["amt"], reverse=True)):
-            rows[i].name = k
-            rows[i].cnt = v["cnt"]
-            rows[i].amt = v["amt"]
-    else:
-        col = Invoice.invoice_type
-        rows = (
-            db.query(
-                func.coalesce(col, "未分类").label("name"),
-                func.count(Invoice.id).label("cnt"),
-                func.coalesce(func.sum(Invoice.total_amount), 0).label("amt"),
-            )
-            .filter(Invoice.parse_status == "parsed")
-            .group_by("name")
-            .order_by(func.count(Invoice.id).desc())
-            .limit(20)
-            .all()
-        )
+        .filter(Invoice.parse_status == "parsed")
+        .group_by("name")
+        .order_by(func.count(Invoice.id).desc())
+        .limit(20)
+        .all()
+    )
 
     items = [
         CategoryPoint(
