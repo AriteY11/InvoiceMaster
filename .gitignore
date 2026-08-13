@@ -1,5 +1,7 @@
 vendor/
 node_modules/
+.trae/
+*.swp
 __pycache__/
 *.pyc
 *.pyo

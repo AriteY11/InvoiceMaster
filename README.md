@@ -63,8 +63,11 @@ InvoiceMaster/
 │   ├── vite.config.ts           # Vite 配置
 │   └── package.json             # Node 依赖
 ├── template/                    # 测试发票 PDF 模板
+├── docs/development-plan.md     # 开发实施计划文档
 ├── start_app.bat                # Windows 一键启动脚本
 ├── package.json                 # 根目录构建脚本
+├── CONTRIBUTING.md              # 开发规范（版本管理/提交格式/代码风格）
+├── AGENTS.md                    # AI 助手项目规则
 └── InvoiceMaster_部署手册与使用说明.docx
 ```
 
