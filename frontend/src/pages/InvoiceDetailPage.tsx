@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, AlertTriangle, ChevronDown, ChevronUp, FileText, ExternalLink } from "lucide-react";
-import { getInvoiceDetail } from "@/api/client";
+import { Document, Page, pdfjs } from "react-pdf";
+import { getInvoiceDetail, getInvoiceFileUrl } from "@/api/client";
 import type { InvoiceDetail } from "@/types/invoice";
 import FieldCard from "@/components/FieldCard";
 import ItemsTable from "@/components/ItemsTable";
 import { cn } from "@/lib/utils";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +21,7 @@ export default function InvoiceDetailPage() {
   const [showRaw, setShowRaw] = useState(false);
   const [showPdf, setShowPdf] = useState(true);
   const [pdfError, setPdfError] = useState(false);
+  const [numPages, setNumPages] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -27,6 +34,7 @@ export default function InvoiceDetailPage() {
 
   useEffect(() => {
     setPdfError(false);
+    setNumPages(null);
   }, [id]);
 
   if (loading) {
@@ -97,7 +105,7 @@ export default function InvoiceDetailPage() {
           </button>
           {id && (
             <a
-              href={`/api/invoices/${id}/file`}
+              href={getInvoiceFileUrl(Number(id))}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 px-4 py-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors border-l border-gray-200 dark:border-gray-700"
@@ -111,18 +119,35 @@ export default function InvoiceDetailPage() {
         {showPdf && (
           <div className="border-t border-gray-200 dark:border-gray-700">
             {!pdfError ? (
-              <iframe
-                src={`/api/invoices/${id}/file`}
-                className="w-full h-[680px]"
-                title="发票PDF预览"
-                onError={() => setPdfError(true)}
-              />
+              <div className="flex flex-col items-center p-4">
+                <Document
+                  file={getInvoiceFileUrl(Number(id))}
+                  onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
+                  onLoadError={() => setPdfError(true)}
+                  loading={
+                    <p className="py-16 text-sm text-gray-500 dark:text-gray-400">
+                      PDF 加载中...
+                    </p>
+                  }
+                  className="max-w-full"
+                >
+                  {Array.from(new Array(numPages ?? 1), (_, index) => (
+                    <Page
+                      key={`page_${index + 1}`}
+                      pageNumber={index + 1}
+                      renderAnnotationLayer={false}
+                      renderTextLayer={false}
+                      className="mb-4 shadow-md"
+                    />
+                  ))}
+                </Document>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-500 dark:text-gray-400">
-                <p>浏览器不支持内嵌 PDF 预览</p>
+                <p>PDF 加载失败</p>
                 {id && (
                   <a
-                    href={`/api/invoices/${id}/file`}
+                    href={getInvoiceFileUrl(Number(id))}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"

@@ -2,6 +2,13 @@
 
 基于 FastAPI + React 的电子发票管理工具，支持 PDF 发票的自动解析、存储、查询、统计与导出。适用于个人或小型企业的发票管理需求。
 
+提供两个发行版本：
+
+| 版本 | 形态 | 数据与后端位置 |
+|------|------|----------------|
+| **离线版** | 单 Windows 桌面应用（前后端一体） | 本机（SQLite + PDF 文件） |
+| **在线版** | Windows 桌面壳（前端）+ Linux 后端 | 服务器（Linux + SQLite） |
+
 ## 功能特性
 
 | 模块 | 功能 |
@@ -31,8 +38,13 @@
 - **Tailwind CSS** - 样式框架，支持暗色模式
 - **Zustand** - 状态管理（导出/复制/时区配置持久化）
 - **Recharts** - 统计图表
+- **react-pdf / pdfjs-dist** - 发票 PDF 渲染
 - **React Router** - 前端路由
 - **Lucide React** - 图标库
+
+### 桌面壳
+- **pywebview** - Windows 桌面应用容器（离线版内嵌后端，在线版纯前端壳）
+- **PyInstaller** - 打包为单 exe
 
 ## 项目结构
 
@@ -44,82 +56,104 @@ InvoiceMaster/
 │   │   ├── models/              # 数据库模型
 │   │   ├── schemas/             # Pydantic 数据模型
 │   │   ├── services/            # 业务逻辑（PDF 解析、统计）
-│   │   ├── config.py            # 配置
+│   │   ├── config.py            # 配置（环境变量可注入）
 │   │   ├── db.py                # 数据库连接
+│   │   ├── embedded.py          # 嵌入式启动（uvicorn 后台线程）
 │   │   └── main.py              # FastAPI 入口
-│   ├── data/uploads/            # 上传文件存储
-│   ├── run.py                   # 服务器入口
-│   ├── launcher.py              # Windows 启动器
+│   ├── desktop/
+│   │   ├── offline_app.py       # 离线版桌面入口（前后端一体）
+│   │   └── online_app.py        # 在线版桌面入口（前端壳）
+│   ├── run.py                   # 纯后端启动入口（host/port 可配置）
+│   ├── launcher.py              # 桌面版启动器
 │   └── requirements.txt         # Python 依赖
 ├── frontend/
 │   ├── src/
-│   │   ├── api/                 # API 调用封装
+│   │   ├── api/                 # API 调用封装（API base 可配置）
 │   │   ├── components/          # 通用组件（Layout、弹窗）
-│   │   ├── pages/               # 页面组件
+│   │   ├── pages/               # 页面组件（含服务器配置页）
 │   │   ├── store/               # Zustand 状态
 │   │   ├── types/               # TypeScript 类型
 │   │   └── hooks/               # 自定义 Hooks
 │   ├── index.html               # HTML 入口
 │   ├── vite.config.ts           # Vite 配置
-│   └── package.json             # Node 依赖
+│   └── package.json             # Node 依赖与构建脚本
+├── packaging/                   # PyInstaller 打包 spec
+│   ├── InvoiceMaster_offline.spec
+│   └── InvoiceMaster_online.spec
+├── deploy/linux/                # Linux 后端部署资产
+│   ├── invoicemaster.service    # systemd 单元
+│   ├── nginx.conf               # nginx 反代（可选）
+│   ├── deploy.sh                # 一键部署脚本
+│   └── README.md                # 部署说明
 ├── template/                    # 测试发票 PDF 模板
 ├── docs/development-plan.md     # 开发实施计划文档
 ├── start_app.bat                # Windows 一键启动脚本
-├── package.json                 # 根目录构建脚本
-├── CONTRIBUTING.md              # 开发规范（版本管理/提交格式/代码风格）
+├── CONTRIBUTING.md              # 开发规范
 ├── AGENTS.md                    # AI 助手项目规则
 └── InvoiceMaster_部署手册与使用说明.docx
 ```
 
-## 快速开始
+## 构建与打包
 
-### 环境要求
-
-- Python 3.10+
-- Node.js 18+
-- pip
-
-### 1. 安装后端依赖
+### 离线版（Windows 桌面应用，前后端一体）
 
 ```bash
+# 1. 安装后端依赖与桌面依赖
 cd backend
-pip install --target vendor -r requirements.txt
+pip install -r requirements.txt pywebview pyinstaller
+
+# 2. 构建前端（API 走本地内嵌后端）
+cd ../frontend
+npm install
+npm run build:offline
+
+# 3. 打包单 exe
+cd ..
+pyinstaller packaging/InvoiceMaster_offline.spec
+# 产物：dist/InvoiceMaster.exe
 ```
 
-### 2. 构建前端
+双击 `dist/InvoiceMaster.exe`（或双击 `start_app.bat` 源码运行）。数据存储于 `%LOCALAPPDATA%/InvoiceMaster/data`。
+
+### 在线版（Windows 桌面壳 + Linux 后端）
 
 ```bash
+# 1. 构建前端壳（API 地址运行时配置）
 cd frontend
 npm install
-npm run build
+npm run build:online
+
+# 2. 打包单 exe
+cd ..
+pip install pywebview pyinstaller
+pyinstaller packaging/InvoiceMaster_online.spec
+# 产物：dist/InvoiceMasterOnline.exe
 ```
 
-构建产物输出到 `frontend/dist/`，后端会自动托管静态文件。
+首次启动会引导填写后端服务器地址，配置保存于 `%LOCALAPPDATA%/InvoiceMaster/online-config.json`。
 
-### 3. 启动服务
+### Linux 后端部署
 
-**Windows（一键启动）：**
-
-双击 `start_app.bat` 或执行：
+详见 [deploy/linux/README.md](deploy/linux/README.md)，一键部署：
 
 ```bash
-start_app.bat
+bash deploy/linux/deploy.sh
 ```
 
-**手动启动：**
+部署后健康检查：`curl http://<服务器IP>:8000/api/health`
+
+## 开发模式
 
 ```bash
+# 后端（默认 127.0.0.1:8000）
 cd backend
+pip install -r requirements.txt
 python run.py
-```
 
-启动后访问 http://127.0.0.1:8000
-
-### 验证安装
-
-```bash
-curl http://127.0.0.1:8000/api/health
-# {"status":"ok","service":"InvoiceMaster API"}
+# 前端（Vite dev server，/api 代理到 8000）
+cd frontend
+npm install
+npm run dev
 ```
 
 ## API 概览
@@ -135,8 +169,8 @@ curl http://127.0.0.1:8000/api/health
 | GET | `/api/invoices/export` | 导出 Excel/CSV |
 | GET | `/api/invoices/filters` | 获取筛选选项 |
 | GET | `/api/stats/overview` | 统计概览（总数、总额） |
-| GET | `/api/stats/trend` | 金额趋势 |
-| GET | `/api/stats/category` | 分类统计 |
+| GET | `/api/stats/trends` | 金额趋势 |
+| GET | `/api/stats/categories` | 分类统计 |
 | GET | `/api/health` | 健康检查 |
 
 ## 解析能力
@@ -152,13 +186,21 @@ curl http://127.0.0.1:8000/api/health
 
 ## 配置说明
 
-| 配置项 | 文件 | 说明 |
-|--------|------|------|
-| 应用版本 | `backend/app/config.py` | 显示在页面顶部 |
-| 允许格式 | `backend/app/config.py` | 默认 .pdf |
-| 上传上限 | `backend/app/config.py` | 默认 20MB |
-| 数据库 | `backend/data/invoices.db` | SQLite 自动创建 |
-| 文件存储 | `backend/data/uploads/` | 上传的 PDF 文件 |
+### 后端环境变量
+
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `INVOICEMASTER_DATA_DIR` | Windows `%LOCALAPPDATA%/InvoiceMaster/data`；Linux `$XDG_DATA_HOME/InvoiceMaster/data` | SQLite 与上传文件目录 |
+| `INVOICEMASTER_STATIC_DIR` | `frontend/dist` | 前端静态文件目录 |
+| `INVOICEMASTER_HOST` | `127.0.0.1` | 监听地址 |
+| `INVOICEMASTER_PORT` | `8000` | 监听端口 |
+| `INVOICEMASTER_CORS_ORIGINS` | `*` | 允许的 Origin（逗号分隔） |
+
+### 前端环境变量
+
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `VITE_API_BASE` | `/api` | 构建时 API 地址；在线版运行时由配置覆盖 |
 
 ## 许可证
 

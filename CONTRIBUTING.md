@@ -52,26 +52,39 @@
 ## 本地开发
 
 ```bash
-# 安装后端依赖
+# 后端（默认 127.0.0.1:8000）
 cd backend
-pip install --target vendor -r requirements.txt
+pip install -r requirements.txt
+python run.py
 
-# 安装并构建前端
+# 前端（开发模式，/api 代理到 8000）
 cd frontend
 npm install
-npm run build
-
-# 启动服务（Windows 一键启动，或手动运行）
-start_app.bat
-# 或
-cd backend && python run.py
+npm run dev
 ```
 
 启动后访问 http://127.0.0.1:8000 ，健康检查：`curl http://127.0.0.1:8000/api/health`
+
+## 构建与打包
+
+项目分两个发行版本，构建产物隔离：
+
+```bash
+# 离线版（前后端一体桌面应用，API 走本地内嵌后端）
+cd frontend && npm run build:offline
+cd .. && pyinstaller packaging/InvoiceMaster_offline.spec
+
+# 在线版（前端壳桌面应用，API 运行时配置远程地址）
+cd frontend && npm run build:online
+cd .. && pyinstaller packaging/InvoiceMaster_online.spec
+```
+
+Linux 后端部署见 `deploy/linux/README.md`。
 
 ## 提交前检查清单
 
 - [ ] 版本号三处同步更新
 - [ ] 手册文档版本号一致（如涉及功能变更）
-- [ ] 前端改动已通过 `npm run build`
+- [ ] 前端改动已通过 `npm run build`（或对应 `build:offline` / `build:online`）
+- [ ] 后端改动已通过 `python -m py_compile` 冒烟
 - [ ] Commit 信息符合 Conventional Commits 格式

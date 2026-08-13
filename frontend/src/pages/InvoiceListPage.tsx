@@ -90,15 +90,19 @@ export default function InvoiceListPage() {
     setPage(1);
   }
 
-  function handleExport(format: "xlsx" | "csv") {
+  async function handleExport(format: "xlsx" | "csv") {
     const filterParams = buildQueryParams();
     delete filterParams.page;
     delete filterParams.page_size;
-    exportInvoices(
-      filterParams as Record<string, string | number | undefined>,
-      format,
-      useExportStore.getState().selectedColumns,
-    );
+    try {
+      await exportInvoices(
+        filterParams as Record<string, string | number | undefined>,
+        format,
+        useExportStore.getState().selectedColumns,
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "导出失败");
+    }
     setShowExport(false);
   }
 

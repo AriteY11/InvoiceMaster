@@ -1,7 +1,17 @@
-const API_BASE = "/api";
+let apiBase: string = import.meta.env.VITE_API_BASE ?? "/api";
+
+export function setApiBase(base: string) {
+  if (base) {
+    apiBase = base.replace(/\/+$/, "");
+  }
+}
+
+export function getApiBase(): string {
+  return apiBase;
+}
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, {
+  const res = await fetch(`${apiBase}${url}`, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
@@ -17,7 +27,7 @@ export async function uploadInvoices(files: FileList | File[]) {
   for (let i = 0; i < files.length; i++) {
     formData.append("files", files[i]);
   }
-  const res = await fetch(`${API_BASE}/invoices/upload`, {
+  const res = await fetch(`${apiBase}/invoices/upload`, {
     method: "POST",
     body: formData,
   });
@@ -55,7 +65,7 @@ export function getFilterValues() {
   return request<FilterValues>("/invoices/filters");
 }
 
-export function exportInvoices(params: InvoiceQueryParams = {}, format: "xlsx" | "csv" = "xlsx", columns?: string[]) {
+export async function exportInvoices(params: InvoiceQueryParams = {}, format: "xlsx" | "csv" = "xlsx", columns?: string[]) {
   const searchParams = new URLSearchParams();
   searchParams.set("format", format);
   Object.entries(params).forEach(([key, value]) => {
@@ -67,7 +77,30 @@ export function exportInvoices(params: InvoiceQueryParams = {}, format: "xlsx" |
     searchParams.set("columns", columns.join(","));
   }
   const qs = searchParams.toString();
-  window.open(`${API_BASE}/invoices/export?${qs}`, "_blank");
+
+  const res = await fetch(`${apiBase}/invoices/export?${qs}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || `导出失败: ${res.status}`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match =
+    disposition.match(/filename\*=UTF-8''([^;]+)/) ||
+    disposition.match(/filename="?([^";]+)"?/);
+  const filename = match
+    ? decodeURIComponent(match[1])
+    : `invoices_${Date.now()}.${format}`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export function getInvoiceDetail(id: number) {
@@ -97,4 +130,8 @@ export function getStatsCategories(
   dimension: "invoice_type" | "seller_name" | "item_name" = "invoice_type"
 ) {
   return request<StatsCategory>(`/stats/categories?dimension=${dimension}`);
+}
+
+export function getInvoiceFileUrl(id: number) {
+  return `${apiBase}/invoices/${id}/file`;
 }

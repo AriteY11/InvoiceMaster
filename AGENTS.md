@@ -22,3 +22,5 @@ Conventional Commits：`type(scope): description`
 - Python：遵循 `backend/app/` 现有模式，除非明确要求不加注释。
 - TypeScript/React：遵循 `frontend/src/` 现有模式，用 `@/lib/utils` 的 `cn()` 合并 className。
 - 前端改动后运行 `npm run build` 验证构建。
+- 双版本构建：`npm run build:offline`（离线版 → dist）/ `npm run build:online`（在线版 → dist-online）。
+- 桌面打包：`pyinstaller packaging/InvoiceMaster_offline.spec` 或 `InvoiceMaster_online.spec`；Linux 部署见 `deploy/linux/README.md`。

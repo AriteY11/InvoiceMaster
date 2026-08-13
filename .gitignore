@@ -6,6 +6,8 @@ __pycache__/
 *.pyc
 *.pyo
 dist/
+dist-online/
+build/
 .env
 *.db
 template/
@@ -14,3 +16,6 @@ backend/data/uploads/*
 backend/data/*.log
 backend/venv/
 *.egg-info/
+release/**/*.exe
+.reasonix/
+reasonix.toml
