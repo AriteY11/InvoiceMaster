@@ -17,6 +17,7 @@ backend/data/*.log
 backend/venv/
 .venv/
 .uv-cache/
+.uv-cache*/
 *.egg-info/
 release/**/*.exe
 .reasonix/
