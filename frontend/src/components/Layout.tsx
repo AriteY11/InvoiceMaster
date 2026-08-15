@@ -65,7 +65,7 @@ export default function Layout() {
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-              <span>v2.1.1</span>
+              <span>v2.1.2</span>
               <span className="w-px h-3 bg-gray-300 dark:bg-gray-700" />
               <span>著作人：ForWhat</span>
               <span className="w-px h-3 bg-gray-300 dark:bg-gray-700" />
