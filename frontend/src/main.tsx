@@ -2,23 +2,33 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import LoginPage from "./pages/LoginPage";
+import { isOnlineShell } from "./lib/runtime";
 import "./index.css";
 
 function Root() {
   const [ready, setReady] = useState(false);
-  // 在线版桌面壳（存在 js_api）每次启动先登录；离线版/浏览器无 js_api 直接进入
-  const [isOnlineShell, setIsOnlineShell] = useState(false);
+  // 在线版桌面壳每次启动先登录；离线版/浏览器直接进入
+  const [onlineShell, setOnlineShell] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    async function init() {
-      const pw = window.pywebview;
-      if (pw?.api) {
-        setIsOnlineShell(true);
-      }
+    // pywebview 在页面加载完成后才注入 window.pywebview 并派发 pywebviewready 事件，
+    // 必须等待该事件后再判断运行环境；纯浏览器环境用超时兜底。
+    if (isOnlineShell()) {
+      setOnlineShell(true);
       setReady(true);
+      return;
     }
-    init();
+    const onReady = () => {
+      setOnlineShell(isOnlineShell());
+      setReady(true);
+    };
+    window.addEventListener("pywebviewready", onReady);
+    const fallback = setTimeout(onReady, 1000);
+    return () => {
+      window.removeEventListener("pywebviewready", onReady);
+      clearTimeout(fallback);
+    };
   }, []);
 
   if (!ready) {
@@ -29,7 +39,7 @@ function Root() {
     );
   }
 
-  if (isOnlineShell && !loggedIn) {
+  if (onlineShell && !loggedIn) {
     return <LoginPage onLoggedIn={() => setLoggedIn(true)} />;
   }
 

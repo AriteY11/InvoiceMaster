@@ -5,16 +5,16 @@ import { getInvoices, deleteInvoice, getFilterValues, exportInvoices, getInvoice
 import { useExportStore } from "@/store/export";
 import { useTimezoneStore, formatTzDate } from "@/store/timezone";
 import { useCopyStore, formatFieldLabel, formatFieldValue } from "@/store/copy";
+import { isOnlineShell as detectOnlineShell } from "@/lib/runtime";
 import type { InvoiceSummary, FilterValues } from "@/types/invoice";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
-// 在线版桌面壳存在 pywebview js_api；离线版不显示上传人列与筛选
-const isOnlineShell = Boolean(window.pywebview?.api);
-
 export default function InvoiceListPage() {
   const navigate = useNavigate();
+  // 在线版桌面壳显示上传人列与筛选；离线版隐藏（pywebviewready 之后运行时检测）
+  const isOnlineShell = detectOnlineShell();
   const [data, setData] = useState<{ items: InvoiceSummary[]; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
