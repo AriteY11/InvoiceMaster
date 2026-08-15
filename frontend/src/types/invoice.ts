@@ -15,6 +15,7 @@ export interface InvoiceItem {
 export interface InvoiceSummary {
   id: number;
   file_name: string;
+  uploaded_by: string | null;
   invoice_name: string | null;
   invoice_code: string | null;
   invoice_number: string | null;
@@ -116,6 +117,7 @@ export interface InvoiceQueryParams {
   amount_max?: number;
   seller_name?: string;
   invoice_type?: string;
+  uploader?: string;
   uploaded_from?: string;
   uploaded_to?: string;
 }

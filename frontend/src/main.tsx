@@ -1,33 +1,20 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import ServerConfigPage from "./pages/ServerConfigPage";
-import { setApiBase, setApiToken } from "./api/client";
+import LoginPage from "./pages/LoginPage";
 import "./index.css";
 
 function Root() {
   const [ready, setReady] = useState(false);
-  const [needConfig, setNeedConfig] = useState(false);
+  // 在线版桌面壳（存在 js_api）每次启动先登录；离线版/浏览器无 js_api 直接进入
+  const [isOnlineShell, setIsOnlineShell] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     async function init() {
       const pw = window.pywebview;
       if (pw?.api) {
-        try {
-          const base = await pw.api.get_api_base();
-          const token = await pw.api.get_api_token();
-          setApiToken(token || "");
-          if (base) {
-            setApiBase(base);
-            setReady(true);
-            return;
-          }
-          setNeedConfig(true);
-          setReady(true);
-          return;
-        } catch {
-          // js_api 调用失败（如浏览器环境），回退默认 API base
-        }
+        setIsOnlineShell(true);
       }
       setReady(true);
     }
@@ -42,8 +29,8 @@ function Root() {
     );
   }
 
-  if (needConfig) {
-    return <ServerConfigPage onConfigured={() => setNeedConfig(false)} />;
+  if (isOnlineShell && !loggedIn) {
+    return <LoginPage onLoggedIn={() => setLoggedIn(true)} />;
   }
 
   return <App />;

@@ -155,6 +155,22 @@ export function getStatsCategories(
   return request<StatsCategory>(`/stats/categories?dimension=${dimension}`);
 }
 
+export interface LoginResult {
+  token: string;
+  username: string;
+}
+
+export async function login(username: string, password: string) {
+  return request<LoginResult>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export async function logout() {
+  return request<{ message: string }>("/auth/logout", { method: "POST" });
+}
+
 export function getInvoiceFileUrl(id: number) {
   return `${apiBase}/invoices/${id}/file`;
 }

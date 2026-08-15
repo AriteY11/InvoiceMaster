@@ -10,6 +10,9 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
+// 在线版桌面壳存在 pywebview js_api；离线版不显示上传人列与筛选
+const isOnlineShell = Boolean(window.pywebview?.api);
+
 export default function InvoiceListPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<{ items: InvoiceSummary[]; total: number } | null>(null);
@@ -26,6 +29,7 @@ export default function InvoiceListPage() {
   const [filterAmountMax, setFilterAmountMax] = useState("");
   const [filterSeller, setFilterSeller] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [filterUploader, setFilterUploader] = useState("");
   const [filterUploadFrom, setFilterUploadFrom] = useState("");
   const [filterUploadTo, setFilterUploadTo] = useState("");
 
@@ -38,7 +42,7 @@ export default function InvoiceListPage() {
 
   const hasFilters =
     filterDateFrom || filterDateTo || filterAmountMin || filterAmountMax || filterSeller || filterType ||
-    filterUploadFrom || filterUploadTo;
+    filterUploader || filterUploadFrom || filterUploadTo;
 
   function buildQueryParams() {
     const params: Record<string, string | number | undefined> = {
@@ -52,6 +56,7 @@ export default function InvoiceListPage() {
     if (filterAmountMax) params.amount_max = Number(filterAmountMax);
     if (filterSeller) params.seller_name = filterSeller;
     if (filterType) params.invoice_type = filterType;
+    if (isOnlineShell && filterUploader) params.uploader = filterUploader;
     if (filterUploadFrom) params.uploaded_from = filterUploadFrom;
     if (filterUploadTo) params.uploaded_to = filterUploadTo;
     return params;
@@ -77,7 +82,7 @@ export default function InvoiceListPage() {
   useEffect(() => {
     const cancel = doFetch();
     return cancel;
-  }, [page, keyword, filterDateFrom, filterDateTo, filterAmountMin, filterAmountMax, filterSeller, filterType, filterUploadFrom, filterUploadTo]);
+  }, [page, keyword, filterDateFrom, filterDateTo, filterAmountMin, filterAmountMax, filterSeller, filterType, filterUploader, filterUploadFrom, filterUploadTo]);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 1;
 
@@ -113,6 +118,7 @@ export default function InvoiceListPage() {
     setFilterAmountMax("");
     setFilterSeller("");
     setFilterType("");
+    setFilterUploader("");
     setFilterUploadFrom("");
     setFilterUploadTo("");
     setPage(1);
@@ -313,6 +319,18 @@ export default function InvoiceListPage() {
                 ))}
               </select>
             </div>
+            {isOnlineShell && (
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">上传人</label>
+                <input
+                  type="text"
+                  placeholder="按账号名称筛选"
+                  value={filterUploader}
+                  onChange={(e) => setFilterUploader(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-500"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">上传时间从</label>
               <input
@@ -361,6 +379,9 @@ export default function InvoiceListPage() {
               <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">类型</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">购买方</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">销售方</th>
+              {isOnlineShell && (
+                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">上传人</th>
+              )}
               <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400">价税合计</th>
               <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400">置信度</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">上传时间</th>
@@ -370,7 +391,7 @@ export default function InvoiceListPage() {
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={isOnlineShell ? 10 : 9} className="px-4 py-12 text-center text-gray-400">
                   加载中...
                 </td>
               </tr>
@@ -396,6 +417,11 @@ export default function InvoiceListPage() {
                   <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300 max-w-[140px] truncate">
                     {inv.seller_name || "-"}
                   </td>
+                  {isOnlineShell && (
+                    <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                      {inv.uploaded_by || "-"}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-right text-gray-900 dark:text-white font-medium">
                     {formatAmount(inv.total_amount)}
                   </td>
@@ -438,7 +464,7 @@ export default function InvoiceListPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={isOnlineShell ? 10 : 9} className="px-4 py-12 text-center text-gray-400">
                   暂无发票数据，请先上传发票
                 </td>
               </tr>

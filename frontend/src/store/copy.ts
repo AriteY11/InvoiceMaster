@@ -24,6 +24,7 @@ export const COPY_FIELDS = [
   { key: "total_amount_text", label: "价税合计(大写)" },
   { key: "remarks", label: "备注" },
   { key: "file_name", label: "文件名称" },
+  { key: "uploaded_by", label: "上传人" },
   { key: "page_count", label: "PDF页数" },
   { key: "parse_status", label: "解析状态" },
   { key: "parse_confidence", label: "解析置信度" },
