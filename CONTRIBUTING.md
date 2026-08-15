@@ -65,6 +65,24 @@ npm run dev
 
 启动后访问 http://127.0.0.1:8000 ，健康检查：`curl http://127.0.0.1:8000/api/health`
 
+### 依赖下载加速（国内镜像）
+
+国内网络直连 PyPI/npm 官方源可能极慢。推荐先做一次机器级全局镜像配置：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup_mirrors.ps1
+```
+
+脚本会**先探测**清华 TUNA / 阿里云 / 中科大 / 腾讯云等国内镜像的可用性，可用则自动配置，全部不可用则保持官方源不变：
+
+| 工具 | 配置文件 | 镜像 |
+|------|----------|------|
+| pip | `%APPDATA%\pip\pip.ini` | 探测到的可用 PyPI 镜像 |
+| uv | `%APPDATA%\uv\uv.toml` | 探测到的可用 PyPI 镜像 |
+| npm | 用户级 `.npmrc` | npmmirror |
+
+脚本幂等，重复运行会覆盖镜像配置，旧配置自动备份为 `.bak-<时间戳>`。
+
 ## 构建与打包
 
 项目分两个发行版本，构建产物隔离：
