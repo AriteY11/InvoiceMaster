@@ -13,6 +13,7 @@ FULLWIDTH_LETTER_LOWER = str.maketrans(
     "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ",
     "abcdefghijklmnopqrstuvwxyz",
 )
+FULLWIDTH_PUNCT_MAP = str.maketrans("．－", ".-")
 
 CNY_SYMBOLS = re.compile(r"[￥¥]")
 AMOUNT_CLEANUP = re.compile(r"[^\d.\-]")
@@ -24,6 +25,7 @@ def normalize_fullwidth(text: str) -> str:
     result = text.translate(FULLWIDTH_DIGIT_MAP)
     result = result.translate(FULLWIDTH_LETTER_UPPER)
     result = result.translate(FULLWIDTH_LETTER_LOWER)
+    result = result.translate(FULLWIDTH_PUNCT_MAP)
     return result
 
 
@@ -40,7 +42,8 @@ def normalize_text(text: str) -> str:
 def parse_amount(raw: str) -> Decimal | None:
     if not raw:
         return None
-    cleaned = CNY_SYMBOLS.sub("", raw)
+    cleaned = normalize_fullwidth(raw)
+    cleaned = CNY_SYMBOLS.sub("", cleaned)
     cleaned = cleaned.replace(",", "").replace("，", "")
     cleaned = cleaned.replace(" ", "").replace("\u3000", "")
     cleaned = AMOUNT_CLEANUP.sub("", cleaned)
@@ -55,7 +58,8 @@ def parse_amount(raw: str) -> Decimal | None:
 def parse_tax_rate(raw: str) -> Decimal | None:
     if not raw:
         return None
-    cleaned = raw.replace(" ", "").replace("%", "").replace("％", "")
+    cleaned = normalize_fullwidth(raw)
+    cleaned = cleaned.replace(" ", "").replace("%", "").replace("％", "")
     cleaned = re.sub(r"[^\d.]", "", cleaned)
     if not cleaned:
         return None

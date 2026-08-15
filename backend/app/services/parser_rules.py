@@ -106,7 +106,7 @@ AMOUNT_PATTERN: str = r"[￥¥]?\s*([\d,]+\.?\d*)"
 TAX_RATE_PATTERN: str = r"(\d+\.?\d*)%"
 CHINESE_AMOUNT_PATTERN: str = r"[壹贰叁肆伍陆柒捌玖拾佰仟万亿元角分整零]+"
 
-EXPECTED_HEADER_FIELDS: int = 22
+EXPECTED_HEADER_FIELDS: int = 20
 
 
 def normalize_keyword(text: str) -> str:
