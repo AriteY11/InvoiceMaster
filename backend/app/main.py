@@ -7,10 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .api.routes.auth import router as auth_router
 from .api.routes.invoices import router as invoices_router
 from .api.routes.stats import router as stats_router
 from .config import STATIC_DIR, ensure_directories, settings
-from .db import init_db
+from .db import SessionLocal, init_db
+from .models.auth import Account, AuthSession
 
 
 @asynccontextmanager
@@ -29,21 +31,55 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-# 设置 INVOICEMASTER_API_TOKEN 后启用 Bearer Token 鉴权（未设置时完全关闭）。
-# /api/health 保持公开，供桌面壳与部署脚本就绪探测使用。
-if settings.api_token:
+# 鉴权三模式（按优先级）：
+# 1. 设置 INVOICEMASTER_API_TOKEN  → 静态 Bearer Token 鉴权（/api/health 除外）；
+#    若同时存在账号，账号会话 Token 同样有效（任一生效）。
+# 2. 数据库存在账号               → 账号会话鉴权（登录后携带会话 Token；/api/health、/api/auth/login 除外）
+# 3. 无账号且无静态 Token         → 不鉴权（离线版桌面应用即此模式）
+_PUBLIC_PATHS = {"/api/health", "/api/auth/login"}
 
-    @app.middleware('http')
-    async def require_api_token(request: Request, call_next):
-        path = request.url.path
-        if path.startswith('/api/') and path != '/api/health':
-            authorization = request.headers.get('Authorization', '')
-            token = authorization[7:].strip() if authorization.startswith('Bearer ') else ''
-            if not hmac.compare_digest(token, settings.api_token):
-                return JSONResponse(status_code=401, content={'detail': '未授权：API Token 缺失或无效'})
+
+@app.middleware('http')
+async def auth_middleware(request: Request, call_next):
+    path = request.url.path
+    request.state.username = None
+    request.state.session_token = None
+    if not path.startswith('/api/') or path in _PUBLIC_PATHS:
         return await call_next(request)
 
+    api_token = settings.api_token
+    authorization = request.headers.get('Authorization', '')
+    bearer = authorization[7:].strip() if authorization.startswith('Bearer ') else ''
 
+    if api_token and bearer and hmac.compare_digest(bearer, api_token):
+        return await call_next(request)
+
+    db = SessionLocal()
+    try:
+        has_accounts = db.query(Account.id).first() is not None
+        if not has_accounts:
+            if api_token:
+                return JSONResponse(status_code=401, content={'detail': '未授权：API Token 缺失或无效'})
+            return await call_next(request)
+
+        if not bearer:
+            return JSONResponse(status_code=401, content={'detail': '未登录：请先登录'})
+
+        session = db.query(AuthSession).filter(AuthSession.token == bearer).first()
+        if session is None:
+            return JSONResponse(status_code=401, content={'detail': '登录已失效：请重新登录'})
+        if session.is_expired():
+            db.delete(session)
+            db.commit()
+            return JSONResponse(status_code=401, content={'detail': '登录已过期：请重新登录'})
+        request.state.username = session.username
+        request.state.session_token = session.token
+        return await call_next(request)
+    finally:
+        db.close()
+
+
+app.include_router(auth_router)
 app.include_router(invoices_router)
 app.include_router(stats_router)
 

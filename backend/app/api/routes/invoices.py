@@ -12,7 +12,7 @@ from typing import Optional
 
 from urllib.parse import quote
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -60,10 +60,12 @@ def _process_uploaded_file(content: bytes, original_name: str) -> tuple[Path, st
 
 @router.post("/upload", response_model=UploadInvoicesResponse)
 async def upload_invoices(
+    request: Request,
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
 ) -> UploadInvoicesResponse:
     results: list[UploadInvoiceResult] = []
+    uploaded_by = getattr(request.state, "username", None)
 
     for file in files:
         if not file.filename:
@@ -122,6 +124,7 @@ async def upload_invoices(
                 file_path=str(final_path),
                 file_hash=file_hash,
                 page_count=invoice_data.get("page_count", 0),
+                uploaded_by=uploaded_by,
                 invoice_name=invoice_data.get("invoice_name"),
                 invoice_code=invoice_data.get("invoice_code"),
                 invoice_number=invoice_data.get("invoice_number"),
@@ -200,13 +203,14 @@ def list_invoices(
     amount_max: Optional[float] = Query(None),
     seller_name: Optional[str] = Query(None),
     invoice_type: Optional[str] = Query(None),
+    uploader: Optional[str] = Query(None),
     uploaded_from: Optional[date] = Query(None),
     uploaded_to: Optional[date] = Query(None),
     db: Session = Depends(get_db),
 ) -> InvoiceListResponse:
     query = _build_invoice_query(
         db, keyword, date_from, date_to, amount_min, amount_max,
-        seller_name, invoice_type, uploaded_from, uploaded_to,
+        seller_name, invoice_type, uploader, uploaded_from, uploaded_to,
     )
 
     total = query.count()
@@ -221,6 +225,7 @@ def list_invoices(
         InvoiceSummaryRead(
             id=inv.id,
             file_name=inv.file_name,
+            uploaded_by=inv.uploaded_by,
             invoice_name=inv.invoice_name,
             invoice_code=inv.invoice_code,
             invoice_number=inv.invoice_number,
@@ -246,7 +251,7 @@ EXPORT_FIELDS = [
     "buyer_name", "buyer_tax_number", "buyer_address_phone", "buyer_bank_account",
     "seller_name", "seller_tax_number", "seller_address_phone", "seller_bank_account",
     "amount_excluding_tax", "tax_amount", "total_amount", "total_amount_text",
-    "remarks", "file_name", "page_count",
+    "remarks", "file_name", "uploaded_by", "page_count",
     "parse_status", "parse_confidence", "parser_warnings",
     "created_at",
 ]
@@ -256,7 +261,7 @@ EXPORT_HEADERS = [
     "购买方名称", "购买方纳税人识别号", "购买方地址电话", "购买方开户行及账号",
     "销售方名称", "销售方纳税人识别号", "销售方地址电话", "销售方开户行及账号",
     "不含税金额", "税额", "价税合计", "价税合计(大写)",
-    "备注", "文件名称", "PDF页数",
+    "备注", "文件名称", "上传人", "PDF页数",
     "解析状态", "解析置信度", "解析警告",
     "上传时间",
 ]
@@ -271,6 +276,7 @@ def _build_invoice_query(
     amount_max: Optional[float] = None,
     seller_name: Optional[str] = None,
     invoice_type: Optional[str] = None,
+    uploader: Optional[str] = None,
     uploaded_from: Optional[date] = None,
     uploaded_to: Optional[date] = None,
 ):
@@ -296,6 +302,8 @@ def _build_invoice_query(
         query = query.filter(Invoice.seller_name.ilike(f"%{seller_name}%"))
     if invoice_type:
         query = query.filter(Invoice.invoice_type.ilike(f"%{invoice_type}%"))
+    if uploader:
+        query = query.filter(Invoice.uploaded_by.ilike(f"%{uploader}%"))
     if uploaded_from:
         query = query.filter(Invoice.created_at >= datetime.combine(uploaded_from, datetime.min.time()))
     if uploaded_to:
@@ -327,6 +335,7 @@ def _format_row(inv: Invoice) -> list[str]:
         inv.total_amount_text or "",
         inv.remarks or "",
         inv.file_name or "",
+        inv.uploaded_by or "",
         str(inv.page_count) if inv.page_count else "",
         inv.parse_status or "",
         f"{inv.parse_confidence:.0%}" if inv.parse_confidence else "",
@@ -344,6 +353,7 @@ def export_invoices(
     amount_max: Optional[float] = Query(None),
     seller_name: Optional[str] = Query(None),
     invoice_type: Optional[str] = Query(None),
+    uploader: Optional[str] = Query(None),
     uploaded_from: Optional[date] = Query(None),
     uploaded_to: Optional[date] = Query(None),
     format: str = Query("xlsx", pattern=r"^(csv|xlsx)$"),
@@ -352,7 +362,7 @@ def export_invoices(
 ):
     query = _build_invoice_query(
         db, keyword, date_from, date_to, amount_min, amount_max,
-        seller_name, invoice_type, uploaded_from, uploaded_to,
+        seller_name, invoice_type, uploader, uploaded_from, uploaded_to,
     )
     invoices = query.order_by(Invoice.created_at.desc()).all()
     all_rows = [_format_row(inv) for inv in invoices]
@@ -425,10 +435,12 @@ class ManualInvoiceCreate(BaseModel):
 
 @router.post("/manual", response_model=UploadInvoicesResponse)
 def create_manual_invoices(
+    request: Request,
     invoices: list[ManualInvoiceCreate] = Body(...),
     db: Session = Depends(get_db),
 ) -> UploadInvoicesResponse:
     results: list[UploadInvoiceResult] = []
+    uploaded_by = getattr(request.state, "username", None)
     for i, data in enumerate(invoices):
         label = data.invoice_number or data.invoice_name or f"手动录入 {i + 1}"
         try:
@@ -436,6 +448,7 @@ def create_manual_invoices(
                 file_name=f"手动录入-{label}",
                 parse_status="manual",
                 parse_confidence=1.0,
+                uploaded_by=uploaded_by,
                 invoice_name=data.invoice_name,
                 invoice_code=data.invoice_code,
                 invoice_number=data.invoice_number,

@@ -25,6 +25,7 @@ class InvoiceSummaryRead(BaseModel):
 
     id: int
     file_name: str
+    uploaded_by: str | None = None
     invoice_name: str | None = None
     invoice_code: str | None = None
     invoice_number: str | None = None

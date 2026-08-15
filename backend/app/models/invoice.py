@@ -16,6 +16,7 @@ class Invoice(Base):
     file_path: Mapped[str | None] = mapped_column(String(500))
     file_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
     page_count: Mapped[int] = mapped_column(default=0)
+    uploaded_by: Mapped[str | None] = mapped_column(String(64), index=True)
 
     invoice_name: Mapped[str | None] = mapped_column(String(255))
     invoice_code: Mapped[str | None] = mapped_column(String(32), index=True)
