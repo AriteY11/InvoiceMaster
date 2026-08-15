@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, AlertTriangle, ChevronDown, ChevronUp, FileText, ExternalLink } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
-import { getInvoiceDetail, getInvoiceFileUrl } from "@/api/client";
+import {
+  getInvoiceDetail,
+  getInvoiceFileHeaders,
+  getInvoiceFileUrl,
+  openInvoiceFile,
+} from "@/api/client";
 import type { InvoiceDetail } from "@/types/invoice";
 import FieldCard from "@/components/FieldCard";
 import ItemsTable from "@/components/ItemsTable";
@@ -36,6 +41,9 @@ export default function InvoiceDetailPage() {
     setPdfError(false);
     setNumPages(null);
   }, [id]);
+
+  // pdfjs DocumentInitParameters（含鉴权请求头），身份不变时保持引用稳定
+  const pdfOptions = useMemo(() => ({ httpHeaders: getInvoiceFileHeaders() }), [id]);
 
   if (loading) {
     return (
@@ -104,16 +112,14 @@ export default function InvoiceDetailPage() {
             {showPdf ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
           </button>
           {id && (
-            <a
-              href={getInvoiceFileUrl(Number(id))}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => openInvoiceFile(Number(id)).catch(() => setPdfError(true))}
               className="flex items-center gap-1 px-4 py-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors border-l border-gray-200 dark:border-gray-700"
               title="在新窗口中打开 PDF"
             >
               <ExternalLink className="h-4 w-4" />
               <span className="hidden sm:inline">新窗口打开</span>
-            </a>
+            </button>
           )}
         </div>
         {showPdf && (
@@ -122,6 +128,7 @@ export default function InvoiceDetailPage() {
               <div className="flex flex-col items-center p-4">
                 <Document
                   file={getInvoiceFileUrl(Number(id))}
+                  options={pdfOptions}
                   onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
                   onLoadError={() => setPdfError(true)}
                   loading={
@@ -146,15 +153,13 @@ export default function InvoiceDetailPage() {
               <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-500 dark:text-gray-400">
                 <p>PDF 加载失败</p>
                 {id && (
-                  <a
-                    href={getInvoiceFileUrl(Number(id))}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => openInvoiceFile(Number(id)).catch(() => {})}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                   >
                     <ExternalLink className="h-4 w-4" />
                     在新窗口中打开 PDF
-                  </a>
+                  </button>
                 )}
               </div>
             )}

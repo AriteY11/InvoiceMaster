@@ -1,4 +1,5 @@
 let apiBase: string = import.meta.env.VITE_API_BASE ?? "/api";
+let apiToken: string = "";
 
 export function setApiBase(base: string) {
   if (base) {
@@ -10,9 +11,28 @@ export function getApiBase(): string {
   return apiBase;
 }
 
+export function setApiToken(token: string) {
+  apiToken = token.trim();
+}
+
+export function getApiToken(): string {
+  return apiToken;
+}
+
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const headers: Record<string, string> = {};
+  if (apiToken) {
+    headers.Authorization = `Bearer ${apiToken}`;
+  }
+  if (extra) {
+    return { ...headers, ...(extra as Record<string, string>) };
+  }
+  return headers;
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBase}${url}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     ...options,
   });
   if (!res.ok) {
@@ -29,6 +49,7 @@ export async function uploadInvoices(files: FileList | File[]) {
   }
   const res = await fetch(`${apiBase}/invoices/upload`, {
     method: "POST",
+    headers: authHeaders(),
     body: formData,
   });
   if (!res.ok) {
@@ -78,7 +99,9 @@ export async function exportInvoices(params: InvoiceQueryParams = {}, format: "x
   }
   const qs = searchParams.toString();
 
-  const res = await fetch(`${apiBase}/invoices/export?${qs}`);
+  const res = await fetch(`${apiBase}/invoices/export?${qs}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || `导出失败: ${res.status}`);
@@ -134,4 +157,22 @@ export function getStatsCategories(
 
 export function getInvoiceFileUrl(id: number) {
   return `${apiBase}/invoices/${id}/file`;
+}
+
+/** react-pdf 加载 PDF 时携带的请求头（有 Token 时注入鉴权头）。 */
+export function getInvoiceFileHeaders(): Record<string, string> {
+  return apiToken ? { Authorization: `Bearer ${apiToken}` } : {};
+}
+
+/** 鉴权场景下用 fetch 携带 Token 打开 PDF（新窗口）。 */
+export async function openInvoiceFile(id: number) {
+  const res = await fetch(getInvoiceFileUrl(id), { headers: authHeaders() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "打开 PDF 失败");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

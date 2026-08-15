@@ -2,7 +2,7 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import ServerConfigPage from "./pages/ServerConfigPage";
-import { setApiBase } from "./api/client";
+import { setApiBase, setApiToken } from "./api/client";
 import "./index.css";
 
 function Root() {
@@ -15,6 +15,8 @@ function Root() {
       if (pw?.api) {
         try {
           const base = await pw.api.get_api_base();
+          const token = await pw.api.get_api_token();
+          setApiToken(token || "");
           if (base) {
             setApiBase(base);
             setReady(true);

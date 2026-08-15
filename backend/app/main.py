@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
 
+import hmac
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -26,6 +28,22 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+# 设置 INVOICEMASTER_API_TOKEN 后启用 Bearer Token 鉴权（未设置时完全关闭）。
+# /api/health 保持公开，供桌面壳与部署脚本就绪探测使用。
+if settings.api_token:
+
+    @app.middleware('http')
+    async def require_api_token(request: Request, call_next):
+        path = request.url.path
+        if path.startswith('/api/') and path != '/api/health':
+            authorization = request.headers.get('Authorization', '')
+            token = authorization[7:].strip() if authorization.startswith('Bearer ') else ''
+            if not hmac.compare_digest(token, settings.api_token):
+                return JSONResponse(status_code=401, content={'detail': '未授权：API Token 缺失或无效'})
+        return await call_next(request)
+
+
 app.include_router(invoices_router)
 app.include_router(stats_router)
 

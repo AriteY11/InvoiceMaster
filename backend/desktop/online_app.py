@@ -29,22 +29,33 @@ def _config_dir() -> Path:
 CONFIG_FILE = _config_dir() / "online-config.json"
 
 
-def load_api_base() -> str:
+def load_config() -> dict:
     if CONFIG_FILE.exists():
         try:
             data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            return str(data.get("api_base", ""))
+            if isinstance(data, dict):
+                return data
         except Exception:
-            return ""
-    return ""
+            return {}
+    return {}
+
+
+def save_config(data: dict) -> None:
+    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_FILE.write_text(
+        json.dumps(data, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def load_api_base() -> str:
+    return str(load_config().get("api_base", ""))
 
 
 def save_api_base(api_base: str) -> None:
-    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(
-        json.dumps({"api_base": api_base.strip()}, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    data = load_config()
+    data["api_base"] = api_base.strip()
+    save_config(data)
 
 
 class Api:
@@ -55,6 +66,14 @@ class Api:
 
     def save_api_base(self, api_base: str) -> None:
         save_api_base(api_base)
+
+    def get_api_token(self) -> str:
+        return str(load_config().get("api_token", ""))
+
+    def save_api_token(self, api_token: str) -> None:
+        data = load_config()
+        data["api_token"] = api_token.strip()
+        save_config(data)
 
 
 def main() -> None:

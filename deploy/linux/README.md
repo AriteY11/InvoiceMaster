@@ -52,9 +52,24 @@ curl http://127.0.0.1:8000/api/health
 | `INVOICEMASTER_HOST` | `127.0.0.1` | 监听地址（部署用 `0.0.0.0`） |
 | `INVOICEMASTER_PORT` | `8000` | 监听端口 |
 | `INVOICEMASTER_CORS_ORIGINS` | `*` | 允许的 Origin 列表（逗号分隔） |
+| `INVOICEMASTER_API_TOKEN` | 未设置 | 设置后启用 Bearer Token 鉴权（`/api/health` 除外） |
 
 > CORS 说明：在线版桌面壳从 `file://` 加载前端，跨源请求的 Origin 为 `null`。
 > 内网部署保持 `*` 即可；如需收紧，必须包含 `null`，例如 `null,https://your.domain`。
+
+## API 鉴权（推荐开启）
+
+内网部署建议设置 `INVOICEMASTER_API_TOKEN` 防止未授权访问发票数据：
+
+1. 在 `/etc/systemd/system/invoicemaster.service` 的 `[Service]` 段取消注释并修改：
+   ```
+   Environment=INVOICEMASTER_API_TOKEN=你的随机Token
+   ```
+2. `sudo systemctl daemon-reload && sudo systemctl restart invoicemaster`
+3. 在线版桌面壳首次配置（或重新配置）时，在“API Token”栏填写相同 Token。
+
+未设置该变量时鉴权完全关闭（离线版桌面应用即此模式）。
+验证：`curl http://<服务器IP>:8000/api/invoices` 应返回 `{"detail":"未授权：API Token 缺失或无效"}`。
 
 ## nginx 反向代理（可选）
 

@@ -63,6 +63,11 @@ class Settings:
         raw = os.environ.get("INVOICEMASTER_CORS_ORIGINS", "*")
         return [o.strip() for o in raw.split(",") if o.strip()]
 
+    @property
+    def api_token(self) -> str | None:
+        raw = os.environ.get("INVOICEMASTER_API_TOKEN", "").strip()
+        return raw or None
+
 
 settings = Settings()
 

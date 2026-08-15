@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Server } from "lucide-react";
-import { setApiBase } from "@/api/client";
+import { Server, KeyRound } from "lucide-react";
+import { setApiBase, setApiToken } from "@/api/client";
 
 interface Props {
   onConfigured: () => void;
@@ -8,6 +8,7 @@ interface Props {
 
 export default function ServerConfigPage({ onConfigured }: Props) {
   const [value, setValue] = useState("");
+  const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,8 +24,10 @@ export default function ServerConfigPage({ onConfigured }: Props) {
       const pw = window.pywebview;
       if (pw?.api) {
         await pw.api.save_api_base(url);
+        await pw.api.save_api_token(token.trim());
       }
       setApiBase(url);
+      setApiToken(token);
       onConfigured();
     } catch (e) {
       setError(e instanceof Error ? e.message : "保存失败");
@@ -61,6 +64,21 @@ export default function ServerConfigPage({ onConfigured }: Props) {
             if (e.key === "Enter") handleSave();
           }}
           placeholder="http://192.168.1.100:8000"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        <label className="mt-4 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <KeyRound className="h-3.5 w-3.5" />
+          API Token（可选）
+        </label>
+        <input
+          type="password"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+          }}
+          placeholder="服务器开启鉴权时填写，与 INVOICEMASTER_API_TOKEN 一致"
           className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
