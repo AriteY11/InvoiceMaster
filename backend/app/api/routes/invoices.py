@@ -4,6 +4,7 @@ import csv
 import hashlib
 import io
 import shutil
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Upload
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from ...config import UPLOAD_DIR, settings
 from ...db import get_db
@@ -40,6 +42,20 @@ def _compute_file_hash(file_path: Path) -> str:
         for chunk in iter(lambda: f.read(8192), b""):
             sha256.update(chunk)
     return sha256.hexdigest()
+
+
+def _process_uploaded_file(content: bytes, original_name: str) -> tuple[Path, str, dict]:
+    """写临时文件、计算哈希、提取并解析 PDF（在线程池中执行）。
+
+    临时文件使用随机名，避免同名上传互相覆盖；落位前不做正式存储。
+    """
+    ext = Path(original_name).suffix.lower()
+    temp_path = UPLOAD_DIR / f".tmp-{uuid.uuid4().hex}{ext}"
+    temp_path.write_bytes(content)
+    file_hash = _compute_file_hash(temp_path)
+    extraction = extract_pdf(temp_path)
+    invoice_data = parse_invoice(extraction)
+    return temp_path, file_hash, invoice_data
 
 
 @router.post("/upload", response_model=UploadInvoicesResponse)
@@ -72,30 +88,40 @@ async def upload_invoices(
             ))
             continue
 
-        temp_path = UPLOAD_DIR / file.filename
         try:
-            with open(temp_path, "wb") as f:
-                f.write(content)
+            temp_path, file_hash, invoice_data = await run_in_threadpool(
+                _process_uploaded_file, content, file.filename
+            )
+        except Exception as e:
+            results.append(UploadInvoiceResult(
+                file_name=file.filename, status="error", message=f"解析失败: {str(e)}"
+            ))
+            continue
 
-            file_hash = _compute_file_hash(temp_path)
-
+        final_path: Path | None = None
+        try:
             existing = db.query(Invoice).filter(Invoice.file_hash == file_hash).first()
             if existing:
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
                 results.append(UploadInvoiceResult(
                     file_name=file.filename, status="duplicate", message="该发票已存在",
                     invoice_id=existing.id, duplicate=True,
                 ))
                 continue
 
-            extraction = extract_pdf(temp_path)
-            invoice_data = parse_invoice(extraction)
+            stored_file_name = f"{uuid.uuid4().hex}{ext}"
+            final_path = UPLOAD_DIR / stored_file_name
+            shutil.move(str(temp_path), str(final_path))
 
             invoice = Invoice(
                 file_name=file.filename,
-                stored_file_name=file.filename,
-                file_path=str(temp_path),
+                stored_file_name=stored_file_name,
+                file_path=str(final_path),
                 file_hash=file_hash,
-                page_count=extraction.page_count,
+                page_count=invoice_data.get("page_count", 0),
                 invoice_name=invoice_data.get("invoice_name"),
                 invoice_code=invoice_data.get("invoice_code"),
                 invoice_number=invoice_data.get("invoice_number"),
@@ -149,6 +175,13 @@ async def upload_invoices(
 
         except Exception as e:
             db.rollback()
+            # 清理已落位的正式文件；未落位时清理临时文件
+            for p in (final_path, temp_path):
+                if p is not None and p.exists():
+                    try:
+                        p.unlink()
+                    except OSError:
+                        pass
             results.append(UploadInvoiceResult(
                 file_name=file.filename, status="error", message=f"解析失败: {str(e)}"
             ))
@@ -383,9 +416,9 @@ class ManualInvoiceCreate(BaseModel):
     seller_tax_number: str | None = None
     seller_address_phone: str | None = None
     seller_bank_account: str | None = None
-    amount_excluding_tax: float | None = None
-    tax_amount: float | None = None
-    total_amount: float | None = None
+    amount_excluding_tax: Decimal | None = None
+    tax_amount: Decimal | None = None
+    total_amount: Decimal | None = None
     total_amount_text: str | None = None
     remarks: str | None = None
 
@@ -418,9 +451,9 @@ def create_manual_invoices(
                 seller_tax_number=data.seller_tax_number,
                 seller_address_phone=data.seller_address_phone,
                 seller_bank_account=data.seller_bank_account,
-                amount_excluding_tax=Decimal(str(data.amount_excluding_tax)) if data.amount_excluding_tax is not None else None,
-                tax_amount=Decimal(str(data.tax_amount)) if data.tax_amount is not None else None,
-                total_amount=Decimal(str(data.total_amount)) if data.total_amount is not None else None,
+                amount_excluding_tax=data.amount_excluding_tax,
+                tax_amount=data.tax_amount,
+                total_amount=data.total_amount,
                 total_amount_text=data.total_amount_text,
                 remarks=data.remarks,
             )
@@ -499,6 +532,12 @@ def delete_invoice(invoice_id: int, db: Session = Depends(get_db)) -> DeleteInvo
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="发票不存在")
+    file_path = Path(invoice.file_path) if invoice.file_path else None
     db.delete(invoice)
     db.commit()
+    if file_path is not None:
+        try:
+            file_path.unlink()
+        except OSError:
+            pass
     return DeleteInvoiceResponse(message="发票已删除")
