@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import Date, DateTime, Float, JSON, Numeric, String, Text
@@ -46,7 +46,11 @@ class Invoice(Base):
     parser_warnings: Mapped[list[str]] = mapped_column(JSON, default=list)
     parse_confidence: Mapped[float] = mapped_column(Float, default=0.0)
     parse_status: Mapped[str] = mapped_column(String(32), default="parsed", index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        index=True,
+    )
 
     items: Mapped[list["InvoiceItem"]] = relationship(
         back_populates="invoice",

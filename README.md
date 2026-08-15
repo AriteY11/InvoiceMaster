@@ -85,8 +85,7 @@ InvoiceMaster/
 │   ├── nginx.conf               # nginx 反代（可选）
 │   ├── deploy.sh                # 一键部署脚本
 │   └── README.md                # 部署说明
-├── template/                    # 测试发票 PDF 模板
-├── docs/development-plan.md     # 开发实施计划文档
+├── docs/development-plan.md     # 历史开发计划（仅存档参考）
 ├── start_app.bat                # Windows 一键启动脚本
 ├── CONTRIBUTING.md              # 开发规范
 ├── AGENTS.md                    # AI 助手项目规则
@@ -130,7 +129,7 @@ pyinstaller packaging/InvoiceMaster_online.spec
 # 产物：dist/InvoiceMasterOnline.exe
 ```
 
-首次启动会引导填写后端服务器地址，配置保存于 `%LOCALAPPDATA%/InvoiceMaster/online-config.json`。
+首次启动会引导填写后端服务器地址（及可选的 API Token），配置保存于 `%LOCALAPPDATA%/InvoiceMaster/online-config.json`。若 Linux 后端设置了 `INVOICEMASTER_API_TOKEN`，需在配置页填写相同 Token，详见 [deploy/linux/README.md](deploy/linux/README.md)。
 
 ### Linux 后端部署
 
@@ -195,6 +194,7 @@ npm run dev
 | `INVOICEMASTER_HOST` | `127.0.0.1` | 监听地址 |
 | `INVOICEMASTER_PORT` | `8000` | 监听端口 |
 | `INVOICEMASTER_CORS_ORIGINS` | `*` | 允许的 Origin（逗号分隔） |
+| `INVOICEMASTER_API_TOKEN` | 未设置（鉴权关闭） | 设置后启用 Bearer Token 鉴权（`/api/health` 除外） |
 
 ### 前端环境变量
 
