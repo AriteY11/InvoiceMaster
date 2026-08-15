@@ -40,7 +40,7 @@ DATABASE_FILE = DATA_DIR / "invoices.db"
 @dataclass(frozen=True)
 class Settings:
     app_name: str = "InvoiceMaster API"
-    app_version: str = "2.1.0"
+    app_version: str = "2.1.1"
     allowed_extensions: tuple[str, ...] = (".pdf",)
     max_upload_size_mb: int = 20
     default_currency: str = "CNY"
