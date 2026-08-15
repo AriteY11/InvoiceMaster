@@ -12,7 +12,8 @@ Environment=INVOICEMASTER_HOST=0.0.0.0
 Environment=INVOICEMASTER_PORT=8000
 # 内网默认宽松；如需收紧，列出允许的 Origin（桌面壳从 file:// 加载，Origin 为 null，需包含 "null"）
 Environment=INVOICEMASTER_CORS_ORIGINS=*
-# 开启 API 鉴权：设置后除 /api/health 外的所有 API 需要 Bearer Token，桌面壳需填写相同 Token
+# 可选：静态 API Token（与账号密码登录并存，任一生效）。
+# 推荐使用账号模式：部署后运行 /opt/invoicemaster/scripts/manage_accounts.py 创建账号
 # Environment=INVOICEMASTER_API_TOKEN=please-change-me
 ExecStart=/opt/invoicemaster/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 Restart=always

@@ -13,9 +13,10 @@
 
 | 模块 | 功能 |
 |------|------|
+| **账号登录** | 在线版启动先登录（服务器地址+账号+密码），账号由管理脚本创建；离线版无需登录 |
 | **发票上传** | 拖拽上传多个 PDF 电子发票，自动解析提取全部字段信息 |
 | **人工录入** | 手动创建发票，支持一次录入多条，字段自由填写 |
-| **发票列表** | 多条件搜索筛选，分页浏览，支持 Excel/CSV 导出 |
+| **发票列表** | 多条件搜索筛选（含按上传人），分页浏览，支持 Excel/CSV 导出 |
 | **发票详情** | 完整发票信息展示，行项目明细表格，原 PDF 预览 |
 | **统计分析** | 金额趋势折线图、分类饼图、卖家排名柱状图、按类型/月份统计 |
 | **导出配置** | 自由选择导出列，过滤无关字段 |
@@ -129,7 +130,7 @@ pyinstaller packaging/InvoiceMaster_online.spec
 # 产物：dist/InvoiceMasterOnline.exe
 ```
 
-首次启动会引导填写后端服务器地址（及可选的 API Token），配置保存于 `%LOCALAPPDATA%/InvoiceMaster/online-config.json`。若 Linux 后端设置了 `INVOICEMASTER_API_TOKEN`，需在配置页填写相同 Token，详见 [deploy/linux/README.md](deploy/linux/README.md)。
+首次启动进入登录界面，填写后端服务器地址、账号与密码（账号由服务器管理员用 `scripts/manage_accounts.py` 创建），校验通过后进入应用，配置保存于 `%LOCALAPPDATA%/InvoiceMaster/online-config.json`。各账号无权限区分，均可查看全部发票；发票记录上传账号并支持按上传人筛选。详见 [deploy/linux/README.md](deploy/linux/README.md)。
 
 ### Linux 后端部署
 
@@ -159,6 +160,8 @@ npm run dev
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| POST | `/api/auth/login` | 账号登录（返回会话 Token） |
+| POST | `/api/auth/logout` | 退出登录 |
 | POST | `/api/invoices/upload` | 上传 PDF 发票文件 |
 | POST | `/api/invoices/manual` | 手动创建发票 |
 | GET | `/api/invoices` | 发票列表（分页+筛选） |
@@ -194,7 +197,7 @@ npm run dev
 | `INVOICEMASTER_HOST` | `127.0.0.1` | 监听地址 |
 | `INVOICEMASTER_PORT` | `8000` | 监听端口 |
 | `INVOICEMASTER_CORS_ORIGINS` | `*` | 允许的 Origin（逗号分隔） |
-| `INVOICEMASTER_API_TOKEN` | 未设置（鉴权关闭） | 设置后启用 Bearer Token 鉴权（`/api/health` 除外） |
+| `INVOICEMASTER_API_TOKEN` | 未设置（鉴权关闭） | 设置后启用静态 Bearer Token（与账号登录并存，任一生效）；`/api/health` 除外 |
 
 ### 前端环境变量
 

@@ -35,13 +35,20 @@ build_online.bat
 bash release/online/deploy.sh
 ```
 
-脚本自动完成：复制后端代码 → 创建 venv 安装依赖 → 创建数据目录 → 安装并启动 systemd 服务。详见 `deploy/linux/README.md`。
+脚本自动完成：复制后端代码与账号管理脚本 → 创建 venv 安装依赖 → 创建数据目录 → 安装并启动 systemd 服务。详见 `deploy/linux/README.md`。
+
+部署后创建登录账号（交互式：新增账号/修改密码/查看列表）：
+
+```bash
+sudo -u invoicemaster /opt/invoicemaster/venv/bin/python /opt/invoicemaster/scripts/manage_accounts.py
+```
 
 ## 使用
 
-1. 双击 exe 启动前端壳
-2. 首次启动填写后端服务器地址（如 `http://192.168.1.100:8000`）与可选 API Token，配置保存于 `%LOCALAPPDATA%/InvoiceMaster/online-config.json`
-3. 之后自动连接远程后端，展示发票数据与 PDF 图片
+1. 双击 exe 启动前端壳，进入登录界面
+2. 填写后端服务器地址（如 `http://192.168.1.100:8000`）、账号与密码，校验通过后进入应用
+3. 服务器地址与登录凭证保存于 `%LOCALAPPDATA%/InvoiceMaster/online-config.json`
+4. 各账号目前无权限区分，均可查看全部发票；发票列表按账号显示"上传人"并支持按上传人筛选
 
 ## 版本
 

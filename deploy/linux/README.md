@@ -57,19 +57,34 @@ curl http://127.0.0.1:8000/api/health
 > CORS 说明：在线版桌面壳从 `file://` 加载前端，跨源请求的 Origin 为 `null`。
 > 内网部署保持 `*` 即可；如需收紧，必须包含 `null`，例如 `null,https://your.domain`。
 
-## API 鉴权（推荐开启）
+## 账号管理（推荐）
 
-内网部署建议设置 `INVOICEMASTER_API_TOKEN` 防止未授权访问发票数据：
+在线版使用**账号 + 密码**登录（`/api/auth/login` 换取会话 Token，30 天有效）。
+首次部署后先用账号管理脚本创建账号：
+
+```bash
+sudo -u invoicemaster /opt/invoicemaster/venv/bin/python /opt/invoicemaster/scripts/manage_accounts.py
+```
+
+交互式菜单支持：**新增账号 / 修改已有账号密码 / 查看账号列表**。账号保存在服务器 SQLite（`accounts` 表），密码以 scrypt 哈希存储。
+
+- 创建账号后所有 API 自动进入账号鉴权模式（`/api/health`、`/api/auth/login` 除外）
+- 未创建任何账号时后端保持免认证（离线版桌面应用即此模式）
+- 各账号目前无权限区分，均可查看全部发票；发票记录上传账号（列表可按"上传人"筛选）
+
+### 兼容：静态 API Token
+
+也可用环境变量 `INVOICEMASTER_API_TOKEN` 做静态 Token 鉴权（与账号模式并存，任一生效）：
 
 1. 在 `/etc/systemd/system/invoicemaster.service` 的 `[Service]` 段取消注释并修改：
    ```
    Environment=INVOICEMASTER_API_TOKEN=你的随机Token
    ```
 2. `sudo systemctl daemon-reload && sudo systemctl restart invoicemaster`
-3. 在线版桌面壳首次配置（或重新配置）时，在“API Token”栏填写相同 Token。
+3. 设置后桌面壳登录页的账号密码登录仍可用（会话 Token 与静态 Token 均被接受）。
 
-未设置该变量时鉴权完全关闭（离线版桌面应用即此模式）。
-验证：`curl http://<服务器IP>:8000/api/invoices` 应返回 `{"detail":"未授权：API Token 缺失或无效"}`。
+未设置该变量且无账号时鉴权完全关闭。
+验证：`curl http://<服务器IP>:8000/api/invoices` 应返回 `{"detail":"未登录：请先登录"}`。
 
 ## nginx 反向代理（可选）
 

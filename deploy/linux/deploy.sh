@@ -11,8 +11,9 @@ echo "[1/6] 创建应用目录与运行用户"
 sudo mkdir -p "$APP_DIR"
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER" || true
 
-echo "[2/6] 复制后端代码"
+echo "[2/6] 复制后端代码与账号管理脚本"
 sudo cp -r backend "$APP_DIR/backend"
+sudo cp -r scripts "$APP_DIR/scripts"
 
 echo "[3/6] 创建虚拟环境并安装依赖"
 sudo python3 -m venv "$APP_DIR/venv"
